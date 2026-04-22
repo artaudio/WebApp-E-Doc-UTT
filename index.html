@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ระบบรับ-ส่งเอกสาร</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0f1117; --surface:#181b25; --card:#1e2130; --border:#2a2f45;
+    --accent:#3b82f6; --accent2:#22d3ee; --green:#10b981;
+    --yellow:#f59e0b; --red:#ef4444; --text:#e2e8f0; --muted:#64748b; --highlight:#2d3650;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;}
+  body{background:var(--bg);color:var(--text);font-family:'Sarabun',sans-serif;font-size:15px;min-height:100vh;}
+
+  /* LOGIN */
+  #loginScreen{min-height:100vh;display:flex;align-items:center;justify-content:center;background:radial-gradient(ellipse at 60% 40%,#1a2340 0%,#0f1117 70%);}
+  .login-box{background:var(--card);border:1px solid var(--border);border-radius:20px;padding:40px 36px;width:440px;text-align:center;box-shadow:0 24px 64px rgba(0,0,0,.55);}
+  .login-logo{font-size:42px;margin-bottom:12px;}
+  .login-title{font-size:20px;font-weight:700;margin-bottom:4px;}
+  .login-sub{color:var(--muted);font-size:13px;margin-bottom:28px;}
+  .dept-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:22px;}
+  .dept-btn{background:var(--surface);border:2px solid var(--border);border-radius:12px;padding:14px 8px;cursor:pointer;transition:all .18s;color:var(--text);font-family:'Sarabun',sans-serif;font-size:13px;font-weight:600;}
+  .dept-btn:hover{border-color:var(--accent);background:var(--highlight);}
+  .dept-btn.selected{border-color:var(--accent);background:rgba(59,130,246,.15);color:var(--accent);}
+  .dept-btn .dept-icon{font-size:22px;display:block;margin-bottom:5px;}
+  .login-enter{width:100%;background:var(--accent);border:none;border-radius:10px;color:#fff;padding:13px;font-size:16px;font-family:'Sarabun',sans-serif;font-weight:700;cursor:pointer;transition:opacity .2s;}
+  .login-enter:hover{opacity:.85;}
+  .login-enter:disabled{opacity:.35;cursor:not-allowed;}
+
+  /* APP */
+  #appScreen{display:none;}
+  header{background:var(--surface);border-bottom:1px solid var(--border);padding:0 28px;display:flex;align-items:center;justify-content:space-between;height:58px;position:sticky;top:0;z-index:100;}
+  .logo{display:flex;align-items:center;gap:10px;font-weight:700;font-size:16px;}
+  .logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--accent),var(--accent2));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+  .header-right{display:flex;align-items:center;gap:12px;}
+  .dept-tag{padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;border:1.5px solid;}
+  .logout-btn{background:var(--highlight);border:1px solid var(--border);border-radius:8px;color:var(--muted);padding:5px 12px;font-size:13px;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all .15s;}
+  .logout-btn:hover{color:var(--red);border-color:var(--red);}
+  .clock-txt{font-size:13px;color:var(--muted);font-family:'IBM Plex Mono',monospace;}
+
+  .layout{display:grid;grid-template-columns:210px 1fr;min-height:calc(100vh - 58px);}
+  aside{background:var(--surface);border-right:1px solid var(--border);padding:16px 0;}
+  .nav-label{padding:0 18px 6px;font-size:11px;letter-spacing:1.5px;color:var(--muted);text-transform:uppercase;}
+  .nav-item{display:flex;align-items:center;gap:9px;padding:10px 18px;cursor:pointer;border-left:3px solid transparent;transition:all .15s;color:var(--muted);font-size:14px;}
+  .nav-item:hover{background:var(--highlight);color:var(--text);}
+  .nav-item.active{background:var(--highlight);border-left-color:var(--accent);color:var(--accent);font-weight:600;}
+  .nav-badge{margin-left:auto;background:var(--accent);color:#fff;font-size:11px;padding:2px 7px;border-radius:10px;font-family:'IBM Plex Mono',monospace;}
+  .nav-badge.warn{background:var(--yellow);color:#000;}
+
+  main{padding:24px 28px;overflow-y:auto;}
+  .page{display:none;}
+  .page.active{display:block;animation:fadeIn .2s ease;}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+
+  .page-title{font-size:21px;font-weight:700;margin-bottom:3px;}
+  .page-sub{color:var(--muted);font-size:13px;margin-bottom:20px;}
+
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:22px;}
+  .stat-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 18px;}
+  .stat-label{font-size:12px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px;}
+  .stat-value{font-size:28px;font-weight:700;font-family:'IBM Plex Mono',monospace;}
+  .stat-value.blue{color:var(--accent)}.stat-value.green{color:var(--green)}.stat-value.yellow{color:var(--yellow)}.stat-value.red{color:var(--red)}
+
+  .table-card{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+  .table-header{display:flex;align-items:center;justify-content:space-between;padding:14px 18px;border-bottom:1px solid var(--border);flex-wrap:wrap;gap:10px;}
+  .table-title{font-weight:600;font-size:15px;}
+  .search-box{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:7px 12px;color:var(--text);font-family:'Sarabun',sans-serif;font-size:13px;width:190px;outline:none;transition:border-color .2s;}
+  .search-box:focus{border-color:var(--accent);}
+
+  table{width:100%;border-collapse:collapse;}
+  th{text-align:left;padding:9px 14px;font-size:11px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);border-bottom:1px solid var(--border);background:var(--surface);}
+  td{padding:11px 14px;font-size:14px;border-bottom:1px solid var(--border);vertical-align:middle;}
+  tr:last-child td{border-bottom:none;}
+  tr:hover td{background:var(--highlight);cursor:pointer;}
+  .doc-id{font-family:'IBM Plex Mono',monospace;font-size:12px;color:var(--accent2);}
+
+  .badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:600;}
+  .badge-pending{background:rgba(245,158,11,.15);color:var(--yellow)}
+  .badge-received{background:rgba(16,185,129,.15);color:var(--green)}
+  .badge-sent{background:rgba(59,130,246,.15);color:var(--accent)}
+  .badge-urgent{background:rgba(239,68,68,.15);color:var(--red)}
+
+  .action-btn{background:var(--highlight);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:5px 11px;font-size:12px;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all .15s;margin-right:3px;}
+  .action-btn:hover{background:var(--accent);border-color:var(--accent);color:#fff;}
+  .action-btn.danger:hover{background:var(--red);border-color:var(--red);}
+
+  .form-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px;max-width:620px;}
+  .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  .form-full{grid-column:span 2;}
+  .form-group{display:flex;flex-direction:column;gap:5px;}
+  label{font-size:13px;color:var(--muted);font-weight:500;}
+  input,select,textarea{background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:9px 11px;color:var(--text);font-family:'Sarabun',sans-serif;font-size:14px;outline:none;transition:border-color .2s;}
+  input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+  textarea{resize:vertical;min-height:72px;}
+  select option{background:var(--card);}
+  .btn-primary{background:var(--accent);border:none;border-radius:8px;color:#fff;padding:10px 22px;font-size:15px;font-family:'Sarabun',sans-serif;font-weight:600;cursor:pointer;transition:opacity .2s;margin-top:6px;}
+  .btn-primary:hover{opacity:.85;}
+
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:200;align-items:center;justify-content:center;}
+  .modal-overlay.open{display:flex;}
+  .modal{background:var(--card);border:1px solid var(--border);border-radius:16px;padding:26px;width:460px;max-width:95vw;animation:fadeIn .2s ease;}
+  .modal-title{font-size:17px;font-weight:700;margin-bottom:18px;}
+  .modal-close{float:right;background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;}
+  .detail-row{display:flex;gap:12px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px;}
+  .detail-row:last-child{border-bottom:none;}
+  .detail-key{color:var(--muted);min-width:110px;flex-shrink:0;}
+
+  .toast{position:fixed;bottom:22px;right:22px;background:var(--green);color:#fff;padding:11px 18px;border-radius:10px;font-weight:600;font-size:14px;opacity:0;transform:translateY(12px);transition:all .3s;z-index:999;}
+  .toast.show{opacity:1;transform:none;}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="loginScreen">
+  <div class="login-box">
+    <div class="login-logo">📋</div>
+    <div class="login-title">ระบบรับ-ส่งเอกสาร</div>
+    <div class="login-sub">เลือกหน่วยงานของท่านเพื่อเข้าสู่ระบบ</div>
+    <div class="dept-grid" id="deptGrid"></div>
+    <button class="login-enter" id="loginBtn" disabled onclick="doLogin()">เข้าสู่ระบบ →</button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="appScreen">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">📋</div>
+      ระบบรับ-ส่งเอกสาร
+    </div>
+    <div class="header-right">
+      <span class="clock-txt" id="clock"></span>
+      <span class="dept-tag" id="deptTag"></span>
+      <button class="logout-btn" onclick="doLogout()">ออกจากระบบ</button>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <div class="nav-label">เมนูหลัก</div>
+      <div class="nav-item active" id="nav-dashboard" onclick="navigate('dashboard',this)">📊 &nbsp;ภาพรวม</div>
+      <div class="nav-item" id="nav-send" onclick="navigate('send',this)">📤 &nbsp;ส่งเอกสาร</div>
+      <div class="nav-item" id="nav-history" onclick="navigate('history',this)">📁 &nbsp;ประวัติ <span class="nav-badge" id="histBadge">0</span></div>
+      <div style="margin-top:20px">
+        <div class="nav-label">สรุปข้อมูล</div>
+        <div class="nav-item" id="nav-report" onclick="navigate('report',this)">📈 &nbsp;รายงาน</div>
+      </div>
+    </aside>
+
+    <main>
+      <!-- DASHBOARD -->
+      <div class="page active" id="page-dashboard">
+        <div class="page-title" id="dashTitle">ภาพรวม</div>
+        <div class="page-sub" id="dashSub"></div>
+        <div class="stats">
+          <div class="stat-card"><div class="stat-label">เอกสารทั้งหมด</div><div class="stat-value blue" id="statTotal">0</div></div>
+          <div class="stat-card"><div class="stat-label">รอดำเนินการ</div><div class="stat-value yellow" id="statPending">0</div></div>
+          <div class="stat-card"><div class="stat-label">เสร็จสิ้น</div><div class="stat-value green" id="statDone">0</div></div>
+          <div class="stat-card"><div class="stat-label">เร่งด่วน</div><div class="stat-value red" id="statUrgent">0</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">เอกสารล่าสุด</span></div>
+          <table>
+            <thead><tr><th>เลขที่</th><th>ชื่อเรื่อง</th><th>จาก</th><th>ถึง</th><th>ประเภท</th><th>สถานะ</th><th>วันที่</th></tr></thead>
+            <tbody id="dashboardTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- SEND -->
+      <div class="page" id="page-send">
+        <div class="page-title">บันทึกส่งเอกสาร</div>
+        <div class="page-sub" id="sndSub"></div>
+        <div class="form-card">
+          <div class="form-grid">
+            <div class="form-group"><label>เลขที่เอกสาร</label><input type="text" id="sndDocId" placeholder="ระบุเลขที่ หรือปล่อยว่างระบบจะสร้างให้"></div>
+            <div class="form-group"><label>วันที่ส่ง</label><input type="date" id="sndDate"></div>
+            <div class="form-group form-full"><label>ชื่อเรื่อง / หัวข้อเอกสาร</label><input type="text" id="sndSubject" placeholder="ระบุชื่อเรื่อง"></div>
+            <div class="form-group"><label>จากหน่วยงาน / บุคคล</label><input type="text" id="sndFrom" placeholder="ต้นทาง"></div>
+            <div class="form-group"><label>ถึงหน่วยงาน / บุคคล</label><input type="text" id="sndTo" placeholder="ปลายทาง"></div>
+            <div class="form-group"><label>ประเภทเอกสาร</label>
+              <select id="sndType"><option>หนังสือราชการ</option><option>บันทึกข้อความ</option><option>คำสั่ง</option><option>ประกาศ</option><option>รายงาน</option><option>อื่นๆ</option></select></div>
+            <div class="form-group"><label>วิธีการส่ง</label>
+              <select id="sndMethod"><option>ส่งตรง</option><option>ไปรษณีย์</option><option>ระบบสารบรรณ</option><option>อีเมล</option><option>Line Official</option></select></div>
+            <div class="form-group form-full"><label>หมายเหตุ</label><textarea id="sndNote" placeholder="บันทึกเพิ่มเติม (ถ้ามี)"></textarea></div>
+          </div>
+          <button class="btn-primary" onclick="submitSend()">📤 &nbsp;บันทึกส่งเอกสาร</button>
+        </div>
+      </div>
+
+      <!-- HISTORY -->
+      <div class="page" id="page-history">
+        <div class="page-title">ประวัติเอกสาร</div>
+        <div class="page-sub" id="histSub"></div>
+        <div class="table-card">
+          <div class="table-header">
+            <span class="table-title">รายการเอกสารทั้งหมด</span>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input class="search-box" type="text" placeholder="🔍  ค้นหา..." oninput="filterTable(this.value)">
+              <button class="action-btn danger" style="white-space:nowrap;padding:7px 14px;" onclick="deleteAllDocs()">🗑️ ลบทั้งหมด</button>
+            </div>
+          </div>
+          <table>
+            <thead><tr><th>เลขที่</th><th>ชื่อเรื่อง</th><th>จาก</th><th>ถึง</th><th>ประเภท</th><th>สถานะ</th><th>วันที่</th><th>จัดการ</th></tr></thead>
+            <tbody id="historyTable"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- REPORT -->
+      <div class="page" id="page-report">
+        <div class="page-title">รายงานสรุป</div>
+        <div class="page-sub" id="rptSub"></div>
+        <div class="stats">
+          <div class="stat-card"><div class="stat-label">รับเข้า</div><div class="stat-value blue" id="rptIn">0</div></div>
+          <div class="stat-card"><div class="stat-label">ส่งออก</div><div class="stat-value green" id="rptOut">0</div></div>
+          <div class="stat-card"><div class="stat-label">หนังสือราชการ</div><div class="stat-value yellow" id="rptOfficial">0</div></div>
+          <div class="stat-card"><div class="stat-label">เร่งด่วน</div><div class="stat-value red" id="rptUrgent">0</div></div>
+        </div>
+        <div class="table-card">
+          <div class="table-header"><span class="table-title">สรุปตามประเภทเอกสาร</span></div>
+          <table>
+            <thead><tr><th>ประเภท</th><th>รับ</th><th>ส่ง</th><th>รวม</th></tr></thead>
+            <tbody id="reportTable"></tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModal(event)">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal()">×</button>
+    <div class="modal-title">📄 รายละเอียดเอกสาร</div>
+    <div id="modalContent"></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== DEPARTMENTS =====
+const DEPTS = [
+  { key:'ว',   label:'ว.',            icon:'🏢', color:'#f59e0b' },
+  { key:'ข',   label:'ข.',            icon:'🏛️', color:'#10b981' },
+  { key:'ล',   label:'ล.',            icon:'🏗️', color:'#a78bfa' },
+  { key:'ut',  label:'สนง.อุตรดิตถ์',  icon:'🌄', color:'#f97316' },
+  { key:'pc',  label:'สนง.พิชัย',     icon:'🌿', color:'#22d3ee' },
+  { key:'np',  label:'สนง.น้ำปาด',    icon:'💧', color:'#fb7185' },
+];
+
+// ===== DATA STORE =====
+const allDocs = {
+  'ว': [
+    {id:'ว-2568-001',subject:'ขอความอนุเคราะห์ข้อมูลสถิติ',from:'สำนักงานจังหวัด',to:'ว.',type:'หนังสือราชการ',status:'received',urgency:'normal',date:'2025-04-18',note:'',method:'-',dept:'ว'},
+    {id:'ว-2568-002',subject:'แจ้งผลการตรวจประเมิน',from:'ว.',to:'สำนักงานกลาง',type:'รายงาน',status:'sent',urgency:'normal',date:'2025-04-20',note:'',method:'ส่งตรง',dept:'ว'},
+  ],
+  'ข': [
+    {id:'ข-2568-001',subject:'คำสั่งแต่งตั้งคณะทำงาน',from:'ผู้บริหาร',to:'ข.',type:'คำสั่ง',status:'received',urgency:'urgent',date:'2025-04-19',note:'ด่วน',method:'-',dept:'ข'},
+    {id:'ข-2568-002',subject:'บันทึกขออนุมัติงบประมาณ',from:'ข.',to:'ฝ่ายการเงิน',type:'บันทึกข้อความ',status:'sent',urgency:'normal',date:'2025-04-21',note:'',method:'ส่งตรง',dept:'ข'},
+  ],
+  'ล': [
+    {id:'ล-2568-001',subject:'แจ้งวันหยุดราชการเพิ่มเติม',from:'กระทรวง',to:'ล.',type:'ประกาศ',status:'pending',urgency:'normal',date:'2025-04-21',note:'',method:'-',dept:'ล'},
+  ],
+  'ut': [
+    {id:'อต-2568-001',subject:'รายงานผลการดำเนินงานประจำเดือน',from:'สนง.อุตรดิตถ์',to:'ส่วนกลาง',type:'รายงาน',status:'sent',urgency:'normal',date:'2025-04-20',note:'',method:'ระบบสารบรรณ',dept:'ut'},
+    {id:'อต-2568-002',subject:'ขอใช้งบฉุกเฉิน',from:'สำนักงานจังหวัด',to:'สนง.อุตรดิตถ์',type:'หนังสือราชการ',status:'pending',urgency:'urgent',date:'2025-04-22',note:'รอผู้อำนวยการลงนาม',method:'-',dept:'ut'},
+  ],
+  'pc': [
+    {id:'พช-2568-001',subject:'ขออนุมัติโครงการปรับปรุงอาคาร',from:'สนง.พิชัย',to:'สนง.อุตรดิตถ์',type:'หนังสือราชการ',status:'pending',urgency:'normal',date:'2025-04-22',note:'',method:'-',dept:'pc'},
+  ],
+  'np': [],
+};
+
+let currentDept = null;
+let selectedKey = null;
+
+// ===== LOGIN =====
+function buildLoginGrid() {
+  document.getElementById('deptGrid').innerHTML = DEPTS.map(d =>
+    `<button class="dept-btn" onclick="selectDept('${d.key}',this)">
+       <span class="dept-icon">${d.icon}</span>${d.label}
+     </button>`
+  ).join('');
+}
+
+function selectDept(key, btn) {
+  selectedKey = key;
+  document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('selected'));
+  btn.classList.add('selected');
+  document.getElementById('loginBtn').disabled = false;
+}
+
+function doLogin() {
+  if (!selectedKey) return;
+  currentDept = DEPTS.find(d => d.key === selectedKey);
+  if (!allDocs[currentDept.key]) allDocs[currentDept.key] = [];
+
+  document.getElementById('loginScreen').style.display = 'none';
+  document.getElementById('appScreen').style.display = 'block';
+
+  const tag = document.getElementById('deptTag');
+  tag.textContent = currentDept.label;
+  tag.style.cssText = `color:${currentDept.color};border-color:${currentDept.color};background:${currentDept.color}18;padding:5px 14px;border-radius:20px;font-size:13px;font-weight:700;border:1.5px solid;`;
+
+  // reset nav
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('nav-dashboard').classList.add('active');  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-dashboard').classList.add('active');
+
+  setDefaultDates();
+  renderDashboard();
+  startClock();
+}
+
+function doLogout() {
+  currentDept = null; selectedKey = null;
+  document.getElementById('appScreen').style.display = 'none';
+  document.getElementById('loginScreen').style.display = 'flex';
+  document.querySelectorAll('.dept-btn').forEach(b => b.classList.remove('selected'));
+  document.getElementById('loginBtn').disabled = true;
+}
+
+// ===== UTILS =====
+function myDocs() { return allDocs[currentDept.key] || []; }
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+function badgeHTML(status) {
+  const m = {
+    pending:  ['badge-pending','⏳ รอดำเนินการ'],
+    received: ['badge-received','✅ รับแล้ว'],
+    sent:     ['badge-sent','📤 ส่งแล้ว'],
+    urgent:   ['badge-urgent','🔴 เร่งด่วน'],
+  };
+  const [c, l] = m[status] || m.pending;
+  return `<span class="badge ${c}">${l}</span>`;
+}
+
+function genId() {
+  const prefix = {'ว':'ว','ข':'ข','ล':'ล','ut':'อต','pc':'พช','np':'นป'}[currentDept.key] || currentDept.key;
+  const yr = new Date().getFullYear() + 543;
+  const n = String(myDocs().length + 1).padStart(3,'0');
+  return `${prefix}-${yr}-${n}`;
+}
+
+// ===== NAVIGATE =====
+function navigate(page, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + page).classList.add('active');
+  if (el) el.classList.add('active');
+  const dn = currentDept.label;
+  if (page==='dashboard') { renderDashboard(); document.getElementById('dashTitle').textContent='ภาพรวม — '+dn; document.getElementById('dashSub').textContent='แสดงเฉพาะเอกสารของ '+dn; }
+  if (page==='send')      { setDefaultDates(); document.getElementById('sndSub').textContent='บันทึกเอกสารออก — '+dn; }
+  if (page==='history')   { renderHistory(); document.getElementById('histSub').textContent='ประวัติเอกสารทั้งหมดของ '+dn; }
+  if (page==='report')    { renderReport(); document.getElementById('rptSub').textContent='สถิติการรับ-ส่งของ '+dn; }
+}
+
+function setDefaultDates() {
+  const t = new Date().toISOString().split('T')[0];
+  const el = document.getElementById('sndDate'); if(el) el.value=t;
+}
+
+// ===== RENDER =====
+function renderDashboard() {
+  updateStats();
+  const recent = [...myDocs()].reverse().slice(0,8);
+  document.getElementById('dashboardTable').innerHTML = recent.length
+    ? recent.map(d=>`<tr onclick="showDetail('${d.id}')">
+        <td><span class="doc-id">${d.id}</span></td><td>${d.subject}</td>
+        <td>${d.from}</td><td>${d.to}</td><td>${d.type}</td>
+        <td>${badgeHTML(d.urgency==='urgent'||d.urgency==='very_urgent'?'urgent':d.status)}</td>
+        <td>${d.date}</td></tr>`).join('')
+    : `<tr><td colspan="7" style="text-align:center;color:var(--muted);padding:28px">ยังไม่มีเอกสาร</td></tr>`;
+}
+
+function renderHistory(filter='') {
+  const docs = myDocs().filter(d =>
+    d.id.includes(filter)||d.subject.includes(filter)||d.from.includes(filter)||d.to.includes(filter)
+  );
+  document.getElementById('historyTable').innerHTML = docs.length
+    ? docs.map(d=>`<tr>
+        <td><span class="doc-id">${d.id}</span></td><td>${d.subject}</td>
+        <td>${d.from}</td><td>${d.to}</td><td>${d.type}</td>
+        <td>${badgeHTML(d.urgency==='urgent'||d.urgency==='very_urgent'?'urgent':d.status)}</td>
+        <td>${d.date}</td>
+        <td><button class="action-btn" onclick="showDetail('${d.id}')">ดู</button>
+            <button class="action-btn danger" onclick="deleteDoc('${d.id}')">ลบ</button></td>
+      </tr>`).join('')
+    : `<tr><td colspan="8" style="text-align:center;color:var(--muted);padding:28px">ไม่พบเอกสาร</td></tr>`;
+  document.getElementById('histBadge').textContent = myDocs().length;
+}
+
+function renderReport() {
+  const docs = myDocs();
+  document.getElementById('rptIn').textContent      = docs.filter(d=>d.status!=='sent').length;
+  document.getElementById('rptOut').textContent     = docs.filter(d=>d.status==='sent').length;
+  document.getElementById('rptOfficial').textContent= docs.filter(d=>d.type==='หนังสือราชการ').length;
+  document.getElementById('rptUrgent').textContent  = docs.filter(d=>d.urgency==='urgent'||d.urgency==='very_urgent').length;
+  const types=['หนังสือราชการ','บันทึกข้อความ','คำสั่ง','ประกาศ','รายงาน','อื่นๆ'];
+  document.getElementById('reportTable').innerHTML = types.map(t=>{
+    const tin  = docs.filter(d=>d.type===t&&d.status!=='sent').length;
+    const tout = docs.filter(d=>d.type===t&&d.status==='sent').length;
+    return `<tr><td>${t}</td><td>${tin}</td><td>${tout}</td><td><strong>${tin+tout}</strong></td></tr>`;
+  }).join('');
+}
+
+function updateStats() {
+  const d = myDocs();
+  document.getElementById('statTotal').textContent   = d.length;
+  document.getElementById('statPending').textContent = d.filter(x=>x.status==='pending').length;
+  document.getElementById('statDone').textContent    = d.filter(x=>x.status==='received'||x.status==='sent').length;
+  document.getElementById('statUrgent').textContent  = d.filter(x=>x.urgency==='urgent'||x.urgency==='very_urgent').length;
+  document.getElementById('histBadge').textContent   = d.length;
+}
+
+function filterTable(v) { renderHistory(v); }
+
+// ===== ACTIONS =====
+function submitSend() {
+  const subject = document.getElementById('sndSubject').value.trim();
+  if (!subject) { toast('⚠️ กรุณากรอกชื่อเรื่อง'); return; }
+  allDocs[currentDept.key].push({
+    id:      document.getElementById('sndDocId').value.trim() || genId(),
+    subject,
+    from:    document.getElementById('sndFrom').value || currentDept.label,
+    to:      document.getElementById('sndTo').value || '-',
+    type:    document.getElementById('sndType').value,
+    status:  'sent',
+    urgency: 'normal',
+    date:    document.getElementById('sndDate').value,
+    note:    document.getElementById('sndNote').value,
+    method:  document.getElementById('sndMethod').value,
+    dept:    currentDept.key
+  });
+  ['sndDocId','sndSubject','sndFrom','sndTo','sndNote'].forEach(id => document.getElementById(id).value='');
+  toast('📤 บันทึกส่งเอกสารสำเร็จ!'); updateStats();
+}
+
+function deleteDoc(id) {
+  if (!confirm('ยืนยันการลบเอกสาร '+id+' ?')) return;
+  allDocs[currentDept.key] = allDocs[currentDept.key].filter(d => d.id !== id);
+  renderHistory(); updateStats(); toast('🗑️ ลบเอกสารแล้ว');
+}
+
+function deleteAllDocs() {
+  const n = myDocs().length;
+  if (n === 0) { toast('⚠️ ไม่มีเอกสารให้ลบ'); return; }
+  if (!confirm(`ยืนยันการลบประวัติเอกสารทั้งหมด ${n} รายการ ของ ${currentDept.label} ?\n\nการดำเนินการนี้ไม่สามารถย้อนกลับได้`)) return;
+  allDocs[currentDept.key] = [];
+  renderHistory(); updateStats(); toast('🗑️ ลบประวัติทั้งหมดแล้ว');
+}
+
+function showDetail(id) {
+  const d = myDocs().find(x => x.id === id);
+  if (!d) return;
+  const urg = {normal:'ปกติ',urgent:'เร่งด่วน',very_urgent:'ด่วนมาก'}[d.urgency]||d.urgency;
+  document.getElementById('modalContent').innerHTML = `
+    <div class="detail-row"><span class="detail-key">เลขที่</span><span class="doc-id">${d.id}</span></div>
+    <div class="detail-row"><span class="detail-key">ชื่อเรื่อง</span><span>${d.subject}</span></div>
+    <div class="detail-row"><span class="detail-key">ประเภท</span><span>${d.type}</span></div>
+    <div class="detail-row"><span class="detail-key">จาก</span><span>${d.from}</span></div>
+    <div class="detail-row"><span class="detail-key">ถึง</span><span>${d.to}</span></div>
+    <div class="detail-row"><span class="detail-key">สถานะ</span>${badgeHTML(d.status)}</div>
+    <div class="detail-row"><span class="detail-key">ความเร่งด่วน</span><span>${urg}</span></div>
+    <div class="detail-row"><span class="detail-key">วิธีส่ง</span><span>${d.method}</span></div>
+    <div class="detail-row"><span class="detail-key">วันที่</span><span>${d.date}</span></div>
+    <div class="detail-row"><span class="detail-key">หมายเหตุ</span><span>${d.note||'-'}</span></div>`;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+
+function closeModal(e) {
+  if (!e || e.target===document.getElementById('modalOverlay') || e.target.classList.contains('modal-close'))
+    document.getElementById('modalOverlay').classList.remove('open');
+}
+
+// ===== CLOCK =====
+let clockTimer = null;
+function startClock() {
+  if (clockTimer) clearInterval(clockTimer);
+  const tick = () => document.getElementById('clock').textContent = new Date().toLocaleTimeString('th-TH');
+  tick(); clockTimer = setInterval(tick, 1000);
+}
+
+// ===== INIT =====
+buildLoginGrid();
+</script>
+</body>
+</html>
